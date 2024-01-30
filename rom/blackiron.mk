@@ -7,6 +7,9 @@ $(call inherit-product, vendor/blackiron/config/common_full_phone.mk)
 # Kernel
 $(call inherit-product, device/motorola/targets/include/kernel/source.mk)
 
+# Boot animation
+TARGET_BOOT_ANIMATION_RES := 1080
+
 # Libhidl
 PLATFORM_PROVIDES_LIBHIDL := true
 
