@@ -21,5 +21,9 @@ $(call inherit-product, device/motorola/targets/include/kernel/source.mk)
 # Inherit some common Lineage stuff.
 $(call inherit-product, vendor/aosp/config/common_full_phone.mk)
 
+TARGET_BOOT_ANIMATION_RES := 1080
+TARGET_USES_AOSP_RECOVERY := true
+TARGET_SUPPORTS_QUICK_TAP := true
+
 PRODUCT_DEVICE := $(DEVICE)
 PRODUCT_NAME := aosp_$(DEVICE)
