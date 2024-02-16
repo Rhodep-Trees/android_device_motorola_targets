@@ -27,7 +27,11 @@ TARGET_BOOT_ANIMATION_RES := 1080
 # Libhidl
 PLATFORM_PROVIDES_LIBHIDL := true
 
-# Required Scripts
-$(warning This ROM requires replace_camera_sepolicy.sh to be ran...)
-
+MATRIXX_MAINTAINER := IczYn
+MATRIXX_CHIPSET := SM6375
+MATRIXX_BATTERY := 5000mah
+MATRIXX_DISPLAY := 1080x2400
+MATRIXX_BUILD_TYPE := Official
+#WITH_GMS := true
+# Required Scripts $(warning This ROMrequires replace_camera_sepolicy.sh to be ran...) 
 PRODUCT_NAME := lineage_$(DEVICE)

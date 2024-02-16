@@ -73,13 +73,24 @@ endef
 # Example output: fstab_dynamic.qcom
 
 define select-fstab
-$(strip $(if $(filter true,$(TARGET_USES_DYNAMIC_PARTITIONS)),\
- $(if $(filter true,$(call has-partition,system_ext)),\
-  $(FSTAB_DYNAMIC_SYSTEM_EXT),\
-  $(FSTAB_DYNAMIC)),\
- $(FSTAB_LEGACY))$(if $(filter true,$(call device-has-characteristic,ufs)),_ufs).$(FSTAB_SUFFIX)\
-)
+$(strip \
+$(eval is_dynamic:=$(TARGET_USES_DYNAMIC_PARTITIONS)) \
+$(eval has_system_ext:=$(call has-partition,system_ext)) \
+$(eval fstab_name:=fstab) \
+$(eval is_ufs:=$(call device-has-characteristic,ufs)) \
+$(eval is_qcom:=$(PRODUCT_USES_QCOM_HARDWARE)) \
+$(if $(filter true,$(is_dynamic)), \
+    $(eval fstab_name:=$(fstab_name)_dynamic)) \
+$(if $(filter true,$(has_system_ext)), \
+    $(eval fstab_name:=$(fstab_name)_system_ext)) \
+$(if $(filter true,$(is_ufs)), \
+    $(eval fstab_name:=$(fstab_name)_ufs)) \
+$(if $(filter true,$(is_qcom)), \
+    $(eval fstab_name:=$(fstab_name).qcom), \
+    $(eval fstab_name:=$(fstab_name).$(TARGET_BOARD_PLATFORM))) \
+$(fstab_name))
 endef
+
 
 # $(call is-kernel-greater-than-or-equal-to,kernel-version)
 # Checks if the target kernel version is greater than or equal to
@@ -144,6 +155,24 @@ define upper
 $(shell echo $(1) | tr '[:lower:]' '[:upper:]')
 endef
 
+# $(call add-device-sku,sku)
+# Creates ODM manifest sku for a specified sku
+# Example:
+#  $(call add-device-sku,n)
+#  This call will add 'n' to ODM_MANIFEST_SKUS and include
+#  'manifest_n.xml' in ODM_MANIFEST_N_FILES.
+define add-device-sku-inner
+$(eval sku:=$(1))
+$(eval sku_manifest:=$(COMMON_PATH)/sku/$(sku)/manifest.xml)
+$(eval sku_unavail_permissions:=$(wildcard $(COMMON_PATH)/sku/$(sku)/unavail.*.xml))
+$(eval sku_permissions:=$(filter-out $(sku_manifest) $(sku_unavail_permissions),$(wildcard $(COMMON_PATH)/sku/$(sku)/*.xml)))
+$(eval ODM_MANIFEST_SKUS += $(sku))
+$(eval ODM_MANIFEST_$(call upper,$(sku))_FILES += $(sku_manifest))
+$(foreach perm,$(sku_unavail_permissions),$(eval PRODUCT_COPY_FILES += $(perm):$(TARGET_COPY_OUT_VENDOR)/etc/permissions/sku_$(sku)/$(lastword $(subst /, ,$(perm)))))
+$(foreach perm,$(sku_permissions),$(eval PRODUCT_COPY_FILES += $(perm):$(TARGET_COPY_OUT_VENDOR)/etc/permissions/sku_$(sku)/$(lastword $(subst /, ,$(perm)))))
+$(if $(wildcard $(sku_manifest)),,$(warning Created ODM sku with non-existent manifest file!))
+endef
+
 # $(call add-device-sku,sku,characteristic)
 # Creates ODM manifest sku for a specified sku
 # How it works:
@@ -158,15 +187,14 @@ endef
 #  'manifest_n.xml' in ODM_MANIFEST_N_FILES.
 define add-device-sku
 $(eval characteristic:=$(2))
-$(eval sku:=$(1))
-$(eval sku_manifest:=$(COMMON_PATH)/sku/$(sku)/manifest.xml)
-$(eval sku_unavail_permissions:=$(wildcard $(COMMON_PATH)/sku/$(sku)/unavail.*.xml))
-$(eval sku_permissions:=$(filter-out $(sku_manifest) $(sku_unavail_permissions),$(wildcard $(COMMON_PATH)/sku/$(sku)/*.xml)))
 $(if $(filter true,$(call device-has-characteristic,$(characteristic))), \
-  $(eval ODM_MANIFEST_SKUS += $(sku))
-  $(eval ODM_MANIFEST_$(call upper,$(sku))_FILES += $(sku_manifest))
-  $(foreach perm,$(sku_unavail_permissions),$(eval PRODUCT_COPY_FILES += $(perm):$(TARGET_COPY_OUT_VENDOR)/etc/permissions/sku_$(sku)/$(lastword $(subst /, ,$(perm)))))
-  $(foreach perm,$(sku_permissions),$(eval PRODUCT_COPY_FILES += $(perm):$(TARGET_COPY_OUT_VENDOR)/etc/permissions/sku_$(sku)/$(lastword $(subst /, ,$(perm)))))
+    $(call add-device-sku-inner,$(1))
 )
-$(if $(wildcard $(sku_manifest)),,$(warning Created ODM sku with non-existent manifest file!))
 endef
+
+# Define math_lt_or_eq, it comes from aosp master.
+ifndef math_lt_or_eq
+define math_lt_or_eq
+$(if $(call math_gt_or_eq,$(2),$(1)),true)
+endef
+endif
